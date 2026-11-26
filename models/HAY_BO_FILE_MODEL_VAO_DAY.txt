@@ -1,0 +1,2 @@
+1. Bo file best_final.pt vao day va chay 'python export_onnx.py' de tao file best_final.onnx.
+2. Xoa file .pt (chi giu lai file .onnx ~43MB) roi push len GitHub de deploy len Koyeb/Render mien phi!

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FireWatch – Giám sát lửa và khói</title>
+<style>
+:root{--bg:#07050a;--panel:#120d15;--panel2:#1b131f;--edge:#33232f;--text:#e8ebff;--mut:#8087ad;--fire:#ff5a1f;--smoke:#8fb3ff;--ok:#3be8b0;--heat:linear-gradient(90deg,#5b2bff,#d62bb8 45%,#ff5a1f 75%,#ffd23f);--hd:Bahnschrift,"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;--tx:"Segoe UI",system-ui,sans-serif;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#eef0f8;--panel:#fff;--panel2:#f3f4fb;--edge:#d5d8ec;--text:#14172b;--mut:#5d6488;--smoke:#2f5bd8}}
+:root[data-theme="light"]{--bg:#eef0f8;--panel:#fff;--panel2:#f3f4fb;--edge:#d5d8ec;--text:#14172b;--mut:#5d6488;--smoke:#2f5bd8}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 var(--tx);min-height:100vh;background-image:radial-gradient(1000px 500px at 50% -15%,color-mix(in srgb,var(--fire) 24%,transparent),transparent),radial-gradient(800px 400px at 100% 100%,color-mix(in srgb,#5b2bff 18%,transparent),transparent);background-attachment:fixed}
+body[data-s=fire]{--g:var(--fire)}body[data-s=smoke]{--g:var(--smoke)}body[data-s=ok]{--g:var(--ok)}body[data-s=idle]{--g:var(--mut)}
+.wrap{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--edge)}
+.logo{width:36px;height:36px;border-radius:8px;background:var(--panel2);border:1px solid var(--edge);display:grid;place-items:center}
+h1{font:600 1.2rem/1.2 var(--hd);margin:0}
+.sub{color:var(--mut);font-size:.85rem}
+.pills{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:7px;padding:6px 12px;border:1px solid var(--edge);border-radius:6px;background:var(--panel);font-size:.82rem;color:var(--mut)}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.demo{background:color-mix(in srgb,#ffd23f 14%,transparent);border:1px solid color-mix(in srgb,#ffd23f 45%,transparent);border-radius:10px;padding:8px 14px;margin-bottom:14px;font-size:.85rem}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:18px}
+.tabs{display:inline-flex;background:var(--panel2);border-radius:10px;padding:3px;margin-bottom:12px}
+.tab{border:0;background:none;color:var(--mut);font:500 .92rem var(--tx);padding:7px 20px;border-radius:8px;cursor:pointer}
+.tab.on{background:var(--panel);color:var(--text);box-shadow:0 0 0 1px var(--edge)}
+.stage{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#04050c;border:1px solid var(--edge);display:grid;place-items:center;cursor:pointer;
+background-image:linear-gradient(var(--edge) 1px,transparent 1px),linear-gradient(90deg,var(--edge) 1px,transparent 1px);background-size:48px 48px}
+.stage.live{cursor:default;background:#000}
+.stage img,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+.stage.live img.v,.stage.live canvas.v{display:block}
+.br{position:absolute;width:26px;height:26px;border:2px solid var(--g);opacity:.9;transition:.3s;pointer-events:none}
+.br.a{top:10px;left:10px;border-right:0;border-bottom:0}.br.b{top:10px;right:10px;border-left:0;border-bottom:0}
+.br.c{bottom:10px;left:10px;border-right:0;border-top:0}.br.d{bottom:10px;right:10px;border-left:0;border-top:0}
+.tag{position:absolute;top:16px;left:46px;font:600 .8rem var(--hd);color:var(--g);text-shadow:0 0 6px #000;pointer-events:none}
+.empty{text-align:center;color:var(--mut);padding:20px;z-index:1}.empty b{display:block;color:var(--text);font:600 1.2rem var(--hd);margin-bottom:4px}
+.scan{position:absolute;left:0;right:0;height:90px;top:-90px;background:linear-gradient(transparent,color-mix(in srgb,var(--fire) 35%,transparent),transparent);display:none;pointer-events:none}
+.stage.busy .scan{display:block;animation:sc 1.4s linear infinite}
+@keyframes sc{to{top:100%}}@media(prefers-reduced-motion:reduce){.stage.busy .scan{animation:none;top:40%}}
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.row label{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:.88rem}
+input[type=range]{width:180px;accent-color:var(--fire)}
+.go{margin-left:auto;border:0;border-radius:8px;padding:10px 24px;background:#e8501a;color:#fff;font:600 .95rem var(--hd);cursor:pointer}
+.go:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--smoke);outline-offset:2px}
+.err{color:#ff7a7a;margin-top:8px;font-size:.88rem}
+.status{border:1px solid color-mix(in srgb,var(--g) 60%,var(--edge));border-left:6px solid var(--g);border-radius:10px;padding:16px;background:color-mix(in srgb,var(--g) 12%,var(--panel));transition:.3s;box-shadow:0 0 36px color-mix(in srgb,var(--g) 22%,transparent)}
+.status small{color:var(--mut)}
+.big{font:700 2.6rem/1.05 var(--hd);color:var(--g);margin:4px 0 14px;text-shadow:0 0 28px color-mix(in srgb,var(--g) 65%,transparent)}
+
+
+.meter{position:relative;height:8px;border-radius:4px;background:var(--heat)}
+.meter i{position:absolute;top:-5px;width:4px;height:18px;border-radius:2px;background:var(--text);left:2%;transition:left .5s;box-shadow:0 0 8px var(--text)}
+.mt{display:flex;justify-content:space-between;color:var(--mut);font-size:.75rem;margin-top:8px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.tile{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:12px 14px}
+.tile b{display:block;font:700 2.4rem/1.1 var(--hd);font-variant-numeric:tabular-nums}.tile span{color:var(--mut);font-size:.8rem}
+.tile.f b{color:var(--fire);text-shadow:0 0 18px color-mix(in srgb,var(--fire) 60%,transparent)}.tile.s b{color:var(--smoke);text-shadow:0 0 18px color-mix(in srgb,var(--smoke) 50%,transparent)}
+h2{font:600 1rem var(--hd);margin:0 0 8px}
+.log{list-style:none;margin:0;padding:0;max-height:210px;overflow:auto;font-size:.84rem}
+.log li{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--edge)}
+.log time{color:var(--mut);font-variant-numeric:tabular-nums}.log .f{color:var(--fire)}.log .s{color:var(--smoke)}
+.log li.none{color:var(--mut)}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.info div{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:12px 14px}
+.info span{color:var(--mut);font-size:.8rem;display:block}.info b{font:600 1rem var(--hd)}
+.hide{display:none!important}
+.hero{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--fire) 45%,var(--edge));border-radius:12px;padding:34px 28px 28px;margin-bottom:16px;background:linear-gradient(110deg,color-mix(in srgb,var(--fire) 22%,var(--panel)),var(--panel) 62%);display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 0 60px color-mix(in srgb,var(--fire) 18%,transparent)}
+.hero::before{content:"";position:absolute;left:0;right:0;top:0;height:8px;background:repeating-linear-gradient(-45deg,#ffd23f 0 14px,#111 14px 28px)}
+.ht{font:700 clamp(2rem,5vw,3.6rem)/1.05 var(--hd);margin:6px 0 12px;background:var(--heat);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hl p{max-width:560px;color:var(--mut);margin:0 0 18px;font-size:1rem}
+.hs{display:flex;gap:28px;flex-wrap:wrap}.hs b{display:block;font:700 2.2rem/1 var(--hd);color:var(--fire);text-shadow:0 0 20px color-mix(in srgb,var(--fire) 60%,transparent)}.hs span{color:var(--mut);font-size:.8rem;max-width:150px;display:block}
+@keyframes rd{to{transform:rotate(360deg)}}@keyframes pg{50%{opacity:.2}}@keyframes bl{50%{opacity:.45}}@keyframes bn{50%{filter:brightness(1.35)}}
+.alarm{position:fixed;inset:0;pointer-events:none;z-index:40;transition:box-shadow .3s}
+body[data-s=fire] .alarm{animation:av 1s ease-in-out infinite}@keyframes av{0%,100%{box-shadow:inset 0 0 60px 6px rgba(255,40,10,.35)}50%{box-shadow:inset 0 0 140px 30px rgba(255,40,10,.75)}}
+body[data-s=smoke] .alarm{box-shadow:inset 0 0 100px 10px rgba(255,176,32,.3)}
+.banner{position:fixed;left:0;right:0;top:0;z-index:50;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;text-align:center;font:700 1.1rem var(--hd);color:#fff;display:none}
+body[data-s=fire] .banner{display:block;background:repeating-linear-gradient(-45deg,#d9230f 0 22px,#a8150a 22px 44px);animation:bn 1s steps(2) infinite}
+body[data-s=fire] .banner::before{content:"⚠ BÁO ĐỘNG CHÁY: PHÁT HIỆN LỬA ⚠"}
+body[data-s=smoke] .banner{display:block;background:#b86e00}body[data-s=smoke] .banner::before{content:"⚠ Cảnh báo: phát hiện khói"}
+body[data-s=fire] .wrap,body[data-s=smoke] .wrap{padding-top:64px}
+body[data-s=fire] .big{animation:bl 1s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.radar i,.radar b,.banner,body[data-s=fire] .big{animation:none!important}body[data-s=fire] .alarm{animation:none;box-shadow:inset 0 0 120px 20px rgba(255,40,10,.55)}}
+.hud{position:absolute;top:14px;right:48px;display:flex;gap:12px;font:600 .85rem var(--hd);color:#fff;text-shadow:0 0 6px #000;pointer-events:none}
+.rec::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff2b2b;margin-right:6px;animation:pg 1s infinite}
+.cross{display:none;position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;pointer-events:none;opacity:.5;background:linear-gradient(var(--g),var(--g)) center/2px 100% no-repeat,linear-gradient(var(--g),var(--g)) center/100% 2px no-repeat}.stage.live .cross{display:block}
+.charts{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;margin-top:16px}@media(max-width:860px){.charts{grid-template-columns:1fr}}
+#ch{width:100%;height:200px;display:block}
+.lg{display:flex;gap:16px;font-size:.82rem;color:var(--mut);margin-top:8px}.lg span::before{content:"";display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}.lg .f::before{background:var(--fire)}.lg .s::before{background:var(--smoke)}
+.sb{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--edge);margin:6px 0 12px}.sb i{transition:width .4s}
+.sl{list-style:none;margin:0;padding:0;font-size:.9rem}.sl li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--edge)}.sl b{font-variant-numeric:tabular-nums}
+.tl{display:flex;gap:2px;height:28px}.tl i{flex:1;border-radius:2px;background:var(--edge)}.tl i.ok{background:var(--ok);opacity:.55}.tl i.smoke{background:var(--smoke)}.tl i.fire{background:var(--fire)}
+.foot{margin-top:22px;padding-top:14px;border-top:1px solid var(--edge);color:var(--mut);font-size:.8rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.cloud-sec{margin-top:18px}
+.cloud-hd{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.cloud-hd h2{margin:0;font-size:1.05rem}.cloud-hd span{color:var(--mut);font-size:.82rem}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media(max-width:860px){.plans{grid-template-columns:1fr}}
+.plan{background:var(--panel);border:1px solid var(--edge);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;position:relative;transition:.2s}
+.plan.plus{border-color:color-mix(in srgb,var(--fire) 65%,var(--edge));background:linear-gradient(160deg,color-mix(in srgb,var(--fire) 12%,var(--panel)),var(--panel) 65%);box-shadow:0 0 28px color-mix(in srgb,var(--fire) 14%,transparent)}
+.plan.max{border-color:color-mix(in srgb,#8b5cf6 65%,var(--edge));background:linear-gradient(160deg,color-mix(in srgb,#8b5cf6 12%,var(--panel)),var(--panel) 65%)}
+.badge{position:absolute;top:12px;right:12px;font:600 .72rem var(--hd);padding:3px 9px;border-radius:99px;background:var(--fire);color:#fff;letter-spacing:.3px}
+.plan.max .badge{background:#7c3aed}
+.pname{font:700 1.05rem var(--hd);margin-bottom:2px}
+.pprice{font:700 1.55rem/1.15 var(--hd);margin:6px 0 4px}.pprice small{font:400 .8rem var(--tx);color:var(--mut)}
+.pdesc{color:var(--mut);font-size:.82rem;margin-bottom:12px}
+.plist{list-style:none;margin:0 0 14px;padding:0;font-size:.84rem;display:flex;flex-direction:column;gap:6px;flex:1}
+.plist li::before{content:"✓ ";color:var(--ok);font-weight:700}
+.pbtn{width:100%;border:1px solid var(--edge);border-radius:8px;padding:9px 12px;background:var(--panel2);color:var(--text);font:600 .86rem var(--hd);cursor:pointer;transition:.2s}
+.pbtn:hover{border-color:var(--fire)}
+.plan.plus .pbtn{background:#e8501a;border-color:#e8501a;color:#fff}
+.plan.max .pbtn{background:#6d28d9;border-color:#6d28d9;color:#fff}
+.pbtn.cur{background:var(--panel2)!important;border-color:var(--ok)!important;color:var(--ok)!important;cursor:default}
+</style>
+</head>
+<body data-s="idle">
+<div class="alarm"></div><div class="banner"></div>
+<div class="wrap">
+<header>
+  <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ff5a1f"><path d="M12 2c1 4-3 5-3 9 0 1.5.7 2.7 1.7 3.3C10 12 12 11 12 9c2 2 5 4 5 7.5A5.5 5.5 0 0 1 6.5 18C5 14 8 6 12 2z"/></svg></div>
+  <div><h1>FireWatch</h1><div class="sub">Giám sát lửa và khói cho nhà xưởng, mô hình YOLOv8s</div></div>
+  <div class="pills"><span class="pill"><i></i>Mô hình sẵn sàng</span><span class="pill" id="dev">CPU</span><span class="pill" id="clock">--:--:--</span></div>
+</header>
+<section class="hero"><div class="hl"><div class="ht">Fire &amp; Smoke Detection</div><p>Phát hiện sớm, cảnh báo ngay.</p><div class="hs"><div><b>2</b><span>Mối nguy được nhận diện: lửa và khói</span></div><div><b>v8s</b><span>Kiến trúc YOLO phiên bản 8</span></div><div><b>640</b><span>Điểm ảnh cạnh dài khi phân tích</span></div></div></div></section>
+<div class="demo" id="demoBar">Bản xem trước: kết quả phát hiện được giả lập để bạn xem giao diện. Bản chạy thật dùng model của bạn.</div>
+
+<div class="grid">
+ <section class="card">
+  <div class="tabs"><button class="tab on" data-m="image">Ảnh</button><button class="tab" data-m="video">Video</button></div>
+  <div class="stage" id="stage" tabindex="0" role="button" aria-label="Chọn tệp hoặc kéo thả vào đây">
+    <span class="br a"></span><span class="br b"></span><span class="br c"></span><span class="br d"></span>
+    <span class="tag" id="tag">Chưa có tín hiệu</span>
+    <div class="empty" id="empty"><b>Thả ảnh vào đây</b>hoặc bấm để chọn tệp từ máy</div>
+    <img class="v" id="out" alt="Kết quả phát hiện"><canvas class="v" id="cv"></canvas>
+    <div class="scan"></div><div class="hud"><span class="rec">REC</span><span id="hts">--:--:--</span></div><div class="cross"></div>
+    <input type="file" id="file" class="hide" accept="image/*">
+  </div>
+  <div class="row">
+    <label>Ngưỡng tin cậy <input type="range" id="conf" min="0.05" max="0.9" step="0.05" value="0.25"><b id="cv2">0.25</b></label>
+    <span class="sub" id="fname"></span>
+    <button class="go" id="go" disabled>Phân tích</button>
+  </div>
+  <div class="err" id="err"></div>
+ </section>
+
+ <aside>
+  <div class="status"><small>Trạng thái hiện tại</small><div class="big" id="big">Chờ tín hiệu</div>
+    <div class="meter"><i id="mk"></i></div><div class="mt"><span>An toàn</span><span>Khói</span><span>Lửa</span></div></div>
+  <div class="tiles">
+    <div class="tile f"><b id="nf">0</b><span>Vùng lửa</span></div><div class="tile s"><b id="ns">0</b><span>Vùng khói</span></div>
+    <div class="tile"><b id="nm">–</b><span id="nml">Độ trễ (ms)</span></div><div class="tile"><b id="nfr">–</b><span>Khung hình</span></div>
+  </div>
+  <div class="card" style="margin-bottom:14px"><h2>Diễn biến theo thời gian</h2><div class="tl" id="tl"></div><div class="mt"><span>Cũ hơn</span><span>Mới nhất</span></div></div>
+  <div class="card"><h2>Nhật ký phát hiện</h2><ul class="log" id="log"><li class="none">Chưa có sự kiện nào.</li></ul></div>
+ </aside>
+</div>
+
+<section class="card charts"><div><h2>Mức độ tin cậy theo thời gian</h2><canvas id="ch"></canvas><div class="lg"><span class="f">Lửa</span><span class="s">Khói</span></div></div><div><h2>Tỷ lệ khung hình</h2><div class="sb" id="sb"></div><ul class="sl" id="sl"></ul></div></section>
+
+<section class="card cloud-sec" id="cloudPlans">
+  <div class="cloud-hd">
+    <div><h2>Dịch vụ Giám sát Đám mây (FireWatch Cloud SaaS)</h2><span>Mô hình triển khai phân tầng theo quy mô nhà xưởng và số lượng luồng camera</span></div>
+    <span class="pill"><i></i>Gói đang kích hoạt: <b id="curPlanName" style="color:var(--text);margin-left:4px">Cloud Plus</b></span>
+  </div>
+  <div class="plans">
+    <div class="plan" data-plan="Cloud Starter">
+      <div class="pname">Cloud Starter</div>
+      <div class="pprice">Miễn phí <small>/ xưởng nhỏ</small></div>
+      <div class="pdesc">Phù hợp kho nhỏ hoặc thử nghiệm luồng camera đơn lẻ trên hạ tầng CPU đám mây.</div>
+      <ul class="plist">
+        <li>Kết nối tối đa 2 luồng camera RTSP / IP</li>
+        <li>Suy luận đám mây YOLOv8s (CPU tiêu chuẩn)</li>
+        <li>Cảnh báo trực quan trên giao diện Web</li>
+        <li>Lưu trữ nhật ký sự cố trong 7 ngày</li>
+      </ul>
+      <button class="pbtn" onclick="selectPlan('Cloud Starter', this)">Chọn gói Starter</button>
+    </div>
+
+    <div class="plan plus" data-plan="Cloud Plus">
+      <span class="badge">KHUYÊN DÙNG</span>
+      <div class="pname">Cloud Plus</div>
+      <div class="pprice">499.000đ <small>/ tháng</small></div>
+      <div class="pdesc">Tối ưu cho nhà xưởng vừa, cân bằng tốc độ xử lý thời gian thực và chi phí vận hành.</div>
+      <ul class="plist">
+        <li>Kết nối đồng thời 10 luồng camera nhà xưởng</li>
+        <li>Tăng tốc suy luận GPU Cloud (độ trễ &lt; 50 ms)</li>
+        <li>Cảnh báo tức thì qua Telegram, Zalo OA &amp; Email</li>
+        <li>Lưu trữ video bằng chứng &amp; nhật ký 30 ngày</li>
+      </ul>
+      <button class="pbtn cur" onclick="selectPlan('Cloud Plus', this)">Đang sử dụng</button>
+    </div>
+
+    <div class="plan max" data-plan="Cloud Max">
+      <span class="badge">DOANH NGHIỆP</span>
+      <div class="pname">Cloud Max</div>
+      <div class="pprice">1.490.000đ <small>/ tháng</small></div>
+      <div class="pdesc">Dành cho khu công nghiệp và chuỗi nhà máy cần độ tin cậy cao và tích hợp sâu.</div>
+      <ul class="plist">
+        <li>Không giới hạn số lượng camera &amp; phân khu giám sát</li>
+        <li>Cụm GPU chuyên dụng (Dedicated GPU) &amp; SLA 99,9%</li>
+        <li>Tích hợp API/Webhook kích hoạt hệ thống báo cháy tự động</li>
+        <li>Lưu trữ đám mây 1 năm &amp; tinh chỉnh model riêng theo xưởng</li>
+      </ul>
+      <button class="pbtn" onclick="selectPlan('Cloud Max', this)">Nâng cấp Cloud Max</button>
+    </div>
+  </div>
+</section>
+
+<div class="info">
+  <div><span>Mô hình</span><b id="mn">best_final.pt</b></div><div><span>Kiến trúc</span><b>YOLOv8s</b></div>
+  <div><span>Lớp nhận diện</span><b>fire, smoke</b></div><div><span>Kích thước đầu vào</span><b>640 px</b></div>
+</div>
+<div class="foot"><span>Học phần Học sâu, Nhóm 02. Đề tài: phát hiện lửa và khói phục vụ giám sát an toàn nhà xưởng</span><span>Phiên bản 1.0</span></div>
+</div>
+
+<script>
+const DEMO = false;
+const $ = id => document.getElementById(id);
+let mode='image', file=null, timer=null, raf=null;
+const C={fire:'#ff5a1f',smoke:'#8fb3ff'};
+
+setInterval(()=>{const t=new Date().toLocaleTimeString('vi-VN');$('clock').textContent=t;$('hts').textContent=t},1000);
+if(!DEMO) $('demoBar').classList.add('hide');
+if(!DEMO)fetch('/api/info').then(r=>r.json()).then(i=>{$('mn').textContent=i.model||'Chưa có model';$('dev').textContent=i.device}).catch(()=>{});
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on')); t.classList.add('on');
+  mode=t.dataset.m; reset(); $('file').accept=mode==='image'?'image/*':'video/*';
+  $('empty').innerHTML=`<b>Thả ${mode==='image'?'ảnh':'video'} vào đây</b>hoặc bấm để chọn tệp từ máy`;
+});
+function reset(){
+  clearInterval(timer);cancelAnimationFrame(raf);file=null;$('file').value='';$('fname').textContent='';
+  $('go').disabled=true;$('err').textContent='';$('stage').classList.remove('live','busy');
+  $('out').removeAttribute('src');$('tag').textContent='Chưa có tín hiệu';
+  setS(null);counts(0,0);$('tl').innerHTML='';lastLv='';hist.length=0;fc.fire=fc.smoke=fc.ok=0;drawChart();drawShare();$('nm').textContent='–';$('nfr').textContent='–';
+}
+function setFile(f){if(!f)return;file=f;$('fname').textContent=f.name;$('go').disabled=false;$('tag').textContent='Đã nạp '+f.name;}
+const st=$('stage');
+st.onclick=()=>{if(!st.classList.contains('live'))$('file').click()};
+st.onkeydown=e=>{if(e.key==='Enter')$('file').click()};
+$('file').onchange=e=>setFile(e.target.files[0]);
+st.ondragover=e=>e.preventDefault();st.ondrop=e=>{e.preventDefault();setFile(e.dataTransfer.files[0])};
+$('conf').oninput=()=>$('cv2').textContent=(+$('conf').value).toFixed(2);
+
+function setS(s){ // null | ok | smoke | fire
+  const m={null:['idle','Chờ tín hiệu',2],ok:['ok','An toàn',2],smoke:['smoke','Cảnh báo khói',48],fire:['fire','Báo động lửa',96]}[s];
+  document.body.dataset.s=m[0];$('big').textContent=m[1];$('mk').style.left=m[2]+'%';
+}
+function level(f,s){return f>0?'fire':s>0?'smoke':'ok'}
+function counts(f,s){$('nf').textContent=f;$('ns').textContent=s}
+let lastLv='';
+function log(lv,txt){
+  if(lv===lastLv)return;lastLv=lv;const ul=$('log');ul.querySelector('.none')?.remove();
+  const li=document.createElement('li');
+  li.innerHTML=`<time>${new Date().toLocaleTimeString('vi-VN')}</time><span class="${lv==='fire'?'f':lv==='smoke'?'s':''}">${txt}</span>`;
+  ul.prepend(li);while(ul.children.length>40)ul.lastChild.remove();
+}
+const msg={fire:'Phát hiện lửa',smoke:'Phát hiện khói',ok:'Khu vực an toàn'};
+const hist=[],fc={fire:0,smoke:0,ok:0};
+function drawChart(){
+  const cv=$('ch'),r=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;if(!W)return;cv.width=W*r;cv.height=H*r;
+  const x=cv.getContext('2d'),cs=getComputedStyle(document.documentElement),L=36,T=8,B=H-8,R=W-6,N=60;
+  x.scale(r,r);x.font='12px Segoe UI';x.lineWidth=1;
+  [0,50,100].forEach(v=>{const y=B-(B-T)*v/100;x.strokeStyle=cs.getPropertyValue('--edge');x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();x.fillStyle=cs.getPropertyValue('--mut');x.fillText(v+'%',0,y+4)});
+  [['f','#ff5a1f'],['s','#8fb3ff']].forEach(([k,c])=>{
+    if(!hist.length)return;const X=i=>L+(R-L)*(i+N-hist.length)/(N-1);
+    x.beginPath();hist.forEach((h,i)=>{const py=B-(B-T)*h[k]/100;i?x.lineTo(X(i),py):x.moveTo(X(i),py)});
+    x.strokeStyle=c;x.lineWidth=2.5;x.shadowColor=c;x.shadowBlur=10;x.stroke();x.shadowBlur=0;
+    x.lineTo(X(hist.length-1),B);x.lineTo(X(0),B);x.fillStyle=c+'22';x.fill()});
+}
+function drawShare(){const t=fc.fire+fc.smoke+fc.ok,p=k=>t?fc[k]/t*100:0,A=[['fire','Có lửa','--fire'],['smoke','Chỉ có khói','--smoke'],['ok','An toàn','--ok']];
+  $('sb').innerHTML=A.map(([k,,c])=>'<i style="width:'+p(k)+'%;background:var('+c+')"></i>').join('');
+  $('sl').innerHTML=A.map(([k,n])=>'<li><span>'+n+'</span><b>'+fc[k]+' ('+p(k).toFixed(0)+'%)</b></li>').join('')}
+function apply(f,s,cf,cs){counts(f,s);const lv=level(f,s);setS(lv);log(lv,msg[lv]);const tl=$('tl'),c=document.createElement('i');c.className=lv;tl.append(c);while(tl.children.length>60)tl.firstChild.remove();
+  fc[lv]++;hist.push({f:f?Math.round((cf||1)*100):0,s:s?Math.round((cs||1)*100):0});if(hist.length>60)hist.shift();drawChart();drawShare()}
+drawChart();drawShare();addEventListener('resize',drawChart);
+
+/* ---- giả lập (chỉ dùng khi DEMO) ---- */
+function mock(w,h,t=0){
+  const th=+$('conf').value,d=[],j=Math.sin(t)*w*.01;
+  const p=.72+.14*Math.sin(t*1.3)+Math.random()*.06;
+  if(p>th)d.push({label:'fire',conf:p,box:[w*.38+j,h*.48,w*.56+j,h*.82]});
+  const q=.6+.12*Math.cos(t)+Math.random()*.06;
+  if(q>th)d.push({label:'smoke',conf:q,box:[w*.3+j,h*.12,w*.68+j,h*.5]});
+  return d;
+}
+function draw(ctx,dets){
+  ctx.lineWidth=Math.max(3,ctx.canvas.width/250);ctx.font=`600 ${Math.max(14,ctx.canvas.width/55)}px Segoe UI`;
+  dets.forEach(d=>{const[x1,y1,x2,y2]=d.box,c=C[d.label];const w=ctx.canvas.width,L=Math.max(18,w/28);ctx.save();ctx.shadowColor=c;ctx.shadowBlur=24;ctx.fillStyle=c+'33';ctx.fillRect(x1,y1,x2-x1,y2-y1);ctx.strokeStyle=c;ctx.beginPath();[[x1,y1,1,1],[x2,y1,-1,1],[x1,y2,1,-1],[x2,y2,-1,-1]].forEach(([x,y,a,b])=>{ctx.moveTo(x,y+b*L);ctx.lineTo(x,y);ctx.lineTo(x+a*L,y)});ctx.stroke();ctx.restore();
+    const t=`${d.label==='fire'?'LỬA':'KHÓI'} ${(d.conf*100|0)}%`,tw=ctx.measureText(t).width+12,th=ctx.canvas.width/45+8;
+    ctx.fillStyle=c;ctx.fillRect(x1,y1-th,tw,th);ctx.fillStyle='#000';ctx.fillText(t,x1+6,y1-th/3)});
+}
+const sum=d=>{const m=k=>d.filter(x=>x.label===k),mx=a=>a.length?Math.max(...a.map(x=>x.conf)):0;return[m('fire').length,m('smoke').length,mx(m('fire')),mx(m('smoke'))]};
+function showCanvas(){$('cv').classList.add('v');$('out').classList.remove('v');st.classList.add('live')}
+
+async function post(url){
+  const fd=new FormData();fd.append('file',file);fd.append('conf',$('conf').value);
+  const r=await fetch(url,{method:'POST',body:fd}),j=await r.json();
+  if(!r.ok)throw new Error(j.error||'Lỗi máy chủ');return j;
+}
+$('go').onclick=async()=>{
+  $('err').textContent='';$('go').disabled=true;$('go').textContent='Đang phân tích...';st.classList.add('busy');
+  try{
+    if(mode==='image'){
+      const t0=performance.now();let ms,f,s,cf,cs;
+      if(DEMO){
+        const bmp=await createImageBitmap(file),sc=Math.min(1,1280/bmp.width),cv=$('cv');
+        cv.width=bmp.width*sc;cv.height=bmp.height*sc;const x=cv.getContext('2d');x.drawImage(bmp,0,0,cv.width,cv.height);
+        await new Promise(r=>setTimeout(r,700));const d=mock(cv.width,cv.height);draw(x,d);[f,s,cf,cs]=sum(d);showCanvas();ms=Math.round(performance.now()-t0-700);
+      }else{
+        const j=await post('/api/detect/image');$('out').src=j.image;$('out').classList.add('v');$('cv').classList.remove('v');st.classList.add('live');
+        f=j.summary.fire;s=j.summary.smoke;cf=j.summary.fire_conf;cs=j.summary.smoke_conf;ms=j.time_ms;
+      }
+      $('nm').textContent=ms;$('nfr').textContent='1';apply(f,s,cf,cs);
+    }else if(DEMO){
+      const v=document.createElement('video');v.src=URL.createObjectURL(file);v.muted=true;await v.play();
+      const cv=$('cv');cv.width=Math.min(960,v.videoWidth);cv.height=cv.width*v.videoHeight/v.videoWidth;showCanvas();
+      const x=cv.getContext('2d');let n=0,last=performance.now();$('nml').textContent='Tốc độ (FPS)';
+      const loop=()=>{x.drawImage(v,0,0,cv.width,cv.height);const d=mock(cv.width,cv.height,n/8);draw(x,d);
+        if(++n%6===0){const now=performance.now();$('nm').textContent=(6000/(now-last)).toFixed(1);last=now;$('nfr').textContent=n;apply(...sum(d))}
+        if(!v.ended)raf=requestAnimationFrame(loop);else st.classList.remove('busy')};
+      loop();
+    }else{
+      const j=await post('/api/video/upload');$('nml').textContent='Tốc độ (FPS)';
+      $('out').src='/api/video/stream/'+j.job_id;$('out').classList.add('v');$('cv').classList.remove('v');st.classList.add('live');
+      timer=setInterval(async()=>{const s=await(await fetch('/api/video/status/'+j.job_id)).json();
+        if(s.error)return clearInterval(timer);apply(s.current.fire,s.current.smoke,s.current.fire_conf,s.current.smoke_conf);$('nm').textContent=s.fps;$('nfr').textContent=s.frame+'/'+(s.total||'?');
+        if(s.done){clearInterval(timer);st.classList.remove('busy')}},500);
+    }
+    if(mode==='image')st.classList.remove('busy');
+  }catch(e){$('err').textContent=e.message;st.classList.remove('busy')}
+  $('go').disabled=false;$('go').textContent='Phân tích';
+};
+
+function selectPlan(name, btn){
+  $('curPlanName').textContent = name;
+  document.querySelectorAll('.pbtn').forEach(b=>{
+    b.classList.remove('cur');
+    const p = b.closest('.plan').dataset.plan;
+    b.textContent = p === 'Cloud Starter' ? 'Chọn gói Starter' : (p === 'Cloud Plus' ? 'Chọn gói Plus' : 'Nâng cấp Cloud Max');
+  });
+  btn.classList.add('cur');
+  btn.textContent = 'Đang sử dụng';
+}
+
+</script>
+</body>
+</html>
